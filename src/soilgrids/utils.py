@@ -43,13 +43,13 @@ def reproject_coordinates(lat, lon, target_crs):
     Parameters:
         lat (float): Latitude.
         lon (float): Longitude.
-        target_crs (str): Target Coordinate Reference System in WKT format.
+        target_crs (crs or str): Target CRS (as CRS object or str).
 
     Returns:
         tuple (float): Reprojected coordinates (easting, northing).
     """
     # Define the source CRS (EPSG:4326 - WGS 84, commonly used for lat/lon)
-    src_crs = pyproj.CRS("EPSG:4326")
+    src_crs = "EPSG:4326"
 
     # Create a transformer to convert from the source CRS to the target CRS
     # (always_xy: use lon/lat for source CRS and east/north for target CRS)
@@ -80,13 +80,21 @@ def extract_raster_value(tif_file, coordinates, *, band_number=1, attempts=5, de
 
         try:
             with rasterio.open(tif_file) as src:
-                # Get the target CRS (as str in WKT format) from TIF file
-                target_crs = src.crs.to_wkt()
-                # (HiHydroSoil works with lat/lon too, but better to keep transformation in.)
+                # Check if band number exists in the raster file
+                if band_number not in src.indexes:
+                    try:
+                        raise ValueError(
+                            f"Band number {band_number} does not exist in the raster file {tif_file}."
+                        )
+                    except ValueError as e:
+                        logger.error(e)
+                        raise
 
-                # Reproject the coordinates to the target CRS
+                # Reproject coordinates (HiHydroSoil works with lat/lon too, but better to keep transformation in)
                 east, north = reproject_coordinates(
-                    coordinates["lat"], coordinates["lon"], target_crs
+                    coordinates["lat"],
+                    coordinates["lon"],
+                    src.crs,  # TIF file CRS
                 )
 
                 # Extract the value at the specified coordinates
@@ -106,7 +114,7 @@ def extract_raster_value(tif_file, coordinates, *, band_number=1, attempts=5, de
 
 def check_url(url, attempts=3, delay=2):
     """
-    Check if a file exists at the specified URL and retrieve its content type.
+    Check if a URL exists and, if so, return the URL (original or redirected).
 
     Parameters:
         url (str): URL to check.
@@ -134,11 +142,20 @@ def check_url(url, attempts=3, delay=2):
                     time.sleep(delay)
             else:
                 return None
-        except requests.ConnectionError:
+        except requests.exceptions.MissingSchema:
+            logger.error(f"Invalid URL format: {url}")
+            return None
+        except requests.ConnectionError as e:
             attempts -= 1
 
             if attempts > 0:
                 time.sleep(delay)
+            else:
+                logger.error(f"Connection error: {e}")
+                return None
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request error: {e}")
+            return None
 
     return None
 
