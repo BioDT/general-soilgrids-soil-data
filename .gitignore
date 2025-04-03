@@ -182,3 +182,6 @@ soilMapsHiHydroSoil
 # downloaded / processed soil data
 # (in case they would be created here)
 soilDataPrepared
+
+# logging with rotating files
+soilgrids_app.log.*
