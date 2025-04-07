@@ -70,15 +70,10 @@ def data_processing(coordinates, *, file_name=None, hhs_cache=None):
             raise
 
     # SoilGrids composition part of the data
-    composition_property_names = ["silt", "clay", "sand"]
-    composition_request = gsd.configure_soilgrids_request(
-        coordinates, composition_property_names
-    )
+    composition_request = gsd.configure_soilgrids_request(coordinates)
     composition_raw, time_stamp = gsd.download_soilgrids(composition_request)
     data_query_protocol = [[composition_request["url"], time_stamp]]
-    composition_data = gsd.get_soilgrids_data(
-        composition_raw, composition_property_names
-    )
+    composition_data = gsd.get_soilgrids_data(composition_raw)
 
     # HiHydroSoil part of the data
     hihydrosoil_data, hihydrosoil_queries = gsd.get_hihydrosoil_data(
@@ -89,7 +84,6 @@ def data_processing(coordinates, *, file_name=None, hhs_cache=None):
     gsd.soil_data_to_txt_file(
         coordinates,
         composition_data,
-        composition_property_names,
         hihydrosoil_data,
         data_query_protocol,
         file_name,

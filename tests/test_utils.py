@@ -105,8 +105,14 @@ def test_extract_raster_value(tmp_path):
         extract_raster_value(raster_file, {"lat": 52.0, "lon": 13.0}, band_number=3)
 
     # Test with coordinates out of range
-    value, _ = extract_raster_value(raster_file, {"lat": 10.0, "lon": 80.0})
+    value, time_stamp = extract_raster_value(raster_file, {"lat": 10.0, "lon": 80.0})
     assert value == 255
+
+    # Check time stamp format is 'yyyy-mm-ddThh:mm:ss+00:00'
+    assert time_stamp.endswith("+00:00")
+    assert len(time_stamp) == 25
+    assert len(time_stamp.split(":")) == 4
+    assert len(time_stamp.split("T")) == 2
 
     # Test with valid coordinates and band number
     valid_coordinates = [
@@ -131,9 +137,12 @@ def test_extract_raster_value(tmp_path):
     # Test with example raster file from URL source that has Lambert Azimuthal Equal Area projection
     raster_file = "http://opendap.biodt.eu/grasslands-pdt/landCoverMaps/GER_Preidl/preidl-etal-RSE-2020_land-cover-classification-germany-2016.tif"
     expected_values = [
+        ({"lat": 51.190643, "lon": 9.37393}, 8),  # GER, maize
+        ({"lat": 51.166598, "lon": 9.544605}, 9),  # GER, legumes
         ({"lat": 51.3373, "lon": 10.5367}, 10),  # GER, rapeseed
         ({"lat": 51.047796, "lon": 10.846754}, 15),  # GER, stone fruit
         ({"lat": 51.0581341, "lon": 10.8537121}, 19),  # GER, grassland
+        ({"lat": 51.18744009, "lon": 9.36134661}, 19),  # GER, grassland
         ({"lat": 51.4429008, "lon": 12.3409231}, 21),  # GER, water
         ({"lat": 49.8366436, "lon": 18.1540575}, 255),  # CZ, out of map range
     ]
@@ -143,15 +152,23 @@ def test_extract_raster_value(tmp_path):
         assert value == target[1]
 
 
-def test_check_url():
+def test_check_url(caplog):
     """Test check_url function."""
     assert check_url("https://biodt.eu/") == "https://biodt.eu/"
     assert check_url("http://biodt.eu") == "https://biodt.eu/"  # redirected
+
     assert check_url("invalid_schema") is None
+    assert "Invalid URL format:" in caplog.text
+    caplog.clear()
+
     assert check_url("http://example.com/invalid|character") is None
+    assert "Invalid URL:" in caplog.text
+    caplog.clear()
+
     assert (
         check_url("http://invalid_url") is None
     )  # takes some time due to retry attempts
+    assert "Connection error:" in caplog.text
 
 
 def test_list_to_file(tmp_path):

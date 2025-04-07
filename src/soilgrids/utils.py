@@ -112,7 +112,7 @@ def extract_raster_value(tif_file, coordinates, *, band_number=1, attempts=5, de
                 return None, time_stamp
 
 
-def check_url(url, attempts=3, delay=2):
+def check_url(url, *, attempts=3, delay=2):
     """
     Check if a URL exists and, if so, return the URL (original or redirected).
 
@@ -141,6 +141,9 @@ def check_url(url, attempts=3, delay=2):
                 if attempts > 0:
                     time.sleep(delay)
             else:
+                logger.error(
+                    f"Invalid URL: {url} (Status code {response.status_code})."
+                )
                 return None
         except requests.exceptions.MissingSchema:
             logger.error(f"Invalid URL format: {url}")

@@ -97,20 +97,23 @@ HIHYDROSOIL_SPECS = MappingProxyType(
 )
 
 
-def construct_soil_data_file_name(folder, coordinates, *, file_suffix=".txt"):
+def construct_soil_data_file_name(
+    coordinates, *, folder="soilDataFolder", data_format="txt"
+):
     """
     Construct data file name.
 
     Parameters:
-        folder (str or Path): Folder where the data file will be stored.
         coordinates (dict): Dictionary with 'lat' and 'lon' keys ({'lat': float, 'lon': float}).
-        file_suffix (str): File suffix (default is '.txt').
+        folder (str or Path): Folder where the data file will be stored (default is 'soilDataFolder').
+        data_format (str): File suffix (default is 'txt').
 
     Returns:
         Path: Constructed data file name as a Path object.
     """
-    # Get folder with path appropriate for different operating systems
+    # Get folder with path appropriate for different operating systems create folder if missing
     folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
 
     if "lat" in coordinates and "lon" in coordinates:
         formatted_lat = f"lat{coordinates['lat']:.6f}"
@@ -125,7 +128,7 @@ def construct_soil_data_file_name(folder, coordinates, *, file_suffix=".txt"):
             logger.error(e)
             raise
 
-    file_name = folder / f"{file_start}__2020__soil{file_suffix}"
+    file_name = folder / f"{file_start}__2020__soil.{data_format}"
 
     return file_name
 
@@ -155,13 +158,15 @@ def shape_soildata_for_file(array):
             raise
 
 
-def configure_soilgrids_request(coordinates, property_names):
+def configure_soilgrids_request(
+    coordinates, *, property_names=["silt", "clay", "sand"]
+):
     """
     Configure a request for SoilGrids API based on given coordinates and properties.
 
     Parameters:
         coordinates (dict): Dictionary with 'lat' and 'lon' keys ({'lat': float, 'lon': float}).
-        property_names (list): List of properties to download.
+        property_names (list): List of properties to download (default is ['silt', 'clay', 'sand']).
 
     Returns:
         dict: Request configuration including URL and parameters.
@@ -183,7 +188,7 @@ def configure_soilgrids_request(coordinates, property_names):
     # "value": ["Q0.05", "Q0.5", "Q0.95", "mean", "uncertainty"]
 
 
-def download_soilgrids(request, attempts=6, delay_exponential=8, delay_linear=2):
+def download_soilgrids(request, *, attempts=6, delay_exponential=8, delay_linear=2):
     """
     Download data from SoilGrids REST API with retry functionality.
 
@@ -240,13 +245,13 @@ def download_soilgrids(request, attempts=6, delay_exponential=8, delay_linear=2)
     raise Exception("Maximum number of attempts reached. Failed to download data.")
 
 
-def get_soilgrids_data(soilgrids_data, property_names):
+def get_soilgrids_data(soilgrids_data, *, property_names=["silt", "clay", "sand"]):
     """
     Extract property data and units from SoilGrids data.
 
     Parameters:
         soilgrids_data (dict): SoilGrids data containing property information.
-        property_names (list): List of properties to extract data and units for.
+        property_names (list): List of properties to extract data and units for (default is ['silt', 'clay', 'sand']).
 
     Returns:
         2D numpy.ndarray: Property data for various soil properties and depths (nan if no data found).
@@ -362,7 +367,7 @@ def get_hihydrosoil_data(coordinates, *, cache=None):
 
 
 def map_depths_soilgrids_grassland_model(
-    property_data, property_names, conversion_factor=1, conversion_units=None
+    property_data, property_names, *, conversion_factor=1, conversion_units=None
 ):
     """
     Map data from SoilGrids depths to grassland model depths.
@@ -429,7 +434,7 @@ def map_depths_soilgrids_grassland_model(
     return mapped_data
 
 
-def get_property_means(property_data, property_names, property_units=None):
+def get_property_means(property_data, property_names, *, property_units=None):
     """
     Calculate property data means over all depths (equal weight for each depth).
 
@@ -459,10 +464,11 @@ def get_property_means(property_data, property_names, property_units=None):
 def soil_data_to_txt_file(
     coordinates,
     composition_data,
-    composition_property_names,
     hihydrosoil_data,
     data_query_protocol,
+    *,
     file_name=None,
+    composition_property_names=["silt", "clay", "sand"],
     # nitrogen_data,
 ):
     """
@@ -505,7 +511,9 @@ def soil_data_to_txt_file(
 
     # Write collected soil data to TXT file
     if not file_name:
-        file_name = construct_soil_data_file_name("soilDataPrepared", coordinates)
+        file_name = construct_soil_data_file_name(
+            coordinates, folder="soilDataPrepared"
+        )
 
     # Create data directory if missing
     Path(file_name).parent.mkdir(parents=True, exist_ok=True)
