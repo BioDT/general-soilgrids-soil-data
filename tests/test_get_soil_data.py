@@ -44,15 +44,15 @@ def test_construct_soil_data_file_name():
     """Test construct_soil_data_file_name function."""
     coordinates = {"lat": 12.123456789, "lon": 99.9}
     file_name = construct_soil_data_file_name(coordinates)
-    assert str(file_name).endswith(
-        "soilDataFolder\\lat12.123457_lon99.900000__2020__soil.txt"
+    assert str(file_name.as_posix()).endswith(
+        "soilDataFolder/lat12.123457_lon99.900000__2020__soil.txt"
     )
 
     file_name = construct_soil_data_file_name(
         coordinates, folder="test_folder", data_format="xyz"
     )
-    assert str(file_name).endswith(
-        "test_folder\\lat12.123457_lon99.900000__2020__soil.xyz"
+    assert str(file_name.as_posix()).endswith(
+        "test_folder/lat12.123457_lon99.900000__2020__soil.xyz"
     )
 
     # Remove test folders if they were just created (i.e. they are empty)
