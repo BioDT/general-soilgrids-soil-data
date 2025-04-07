@@ -30,13 +30,17 @@ import pytest
 
 from soilgrids.get_soil_data import (
     HIHYDROSOIL_SPECS,
+    check_property_shapes,
     configure_soilgrids_request,
     construct_soil_data_file_name,
     download_soilgrids,
     get_hihydrosoil_data,
     get_hihydrosoil_map_file,
+    get_property_means,
     get_soilgrids_data,
+    map_depths_soilgrids_grassland_model,
     shape_soildata_for_file,
+    soil_data_to_txt_file,
 )
 
 
@@ -231,3 +235,147 @@ def test_get_hihydrosoil_data():
     for row in hhs_data:
         assert all(np.isnan(row) | np.isfinite(row))  # allow NaN
         assert all(row[np.isfinite(row)] >= 0.0)  # no negative values
+
+
+def test_check_property_shapes(caplog):
+    """Test check_property_shapes function."""
+    soilgrids_values = np.array([[1, 2, 3, 4, 5, 6], [4, 5, 6, 7, 8, 9]])
+    property_names = ["test_var_1", "test_var_2"]
+
+    assert check_property_shapes(soilgrids_values, property_names) is None
+
+    # Omit check of layer numbers
+
+    # Test invalid input formats
+    with caplog.at_level("ERROR"):
+        with pytest.raises(ValueError):
+            check_property_shapes(np.array([[1, 2], [3, 4]]), property_names)
+        assert "do not match the number of required depths (6)!" in caplog.text
+        caplog.clear()
+
+        # No error when omitting check of layer numbers
+        assert (
+            check_property_shapes(
+                np.array([[1, 2], [3, 4]]), property_names, depths_required=None
+            )
+            is None
+        )
+
+        with pytest.raises(ValueError):
+            check_property_shapes(np.array([1, 2, 3, 4, 5, 6]), property_names)
+        assert "does not match the number of property names" in caplog.text
+
+
+def test_map_depths_soilgrids_grassland_model():
+    """Test map_depths_soilgrids_grassland_model function."""
+    # Test values for SoilGrids depths: 0-5cm, 5-15cm, 15-30cm, 30-60cm, 60-100cm, 100-200cm
+    soilgrids_values = np.array([[1, 2, 3, 4, 5, 6], [4, 5, 6, 7, 8, 9]])
+    property_names = ["test_var_1", "test_var_2"]
+
+    # Expected values for grassland model: 10 cm layers down to 200 cm
+    expected_values = np.array(
+        [
+            [1.5, 2.5, 3, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
+            [4.5, 5.5, 6, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+        ]
+    )
+
+    assert (
+        map_depths_soilgrids_grassland_model(soilgrids_values, property_names)
+        == expected_values
+    ).all()
+
+    # Add unit conversion factor
+    assert (
+        map_depths_soilgrids_grassland_model(
+            soilgrids_values, property_names, conversion_factor=2.0
+        )
+        == expected_values * 2.0
+    ).all()
+
+    # Test invalid input formats
+    with pytest.raises(ValueError):
+        map_depths_soilgrids_grassland_model(np.array([[1, 2], [3, 4]]), property_names)
+    with pytest.raises(ValueError):
+        map_depths_soilgrids_grassland_model(
+            np.array([1, 2, 3, 4, 5, 6]), property_names
+        )
+
+
+def test_get_property_means():
+    """Test get_property_means function."""
+    # Test values for SoilGrids depths: 0-5cm, 5-15cm, 15-30cm, 30-60cm, 60-100cm, 100-200cm
+    soilgrids_values = np.array([[1, 2, 3, 4, 5, 6], [4, 5, 6, 7, 8, 9]])
+    property_names = ["test_var_1", "test_var_2"]
+    expected_means = np.array([3.5, 6.5])
+
+    assert (
+        get_property_means(soilgrids_values, property_names) == expected_means
+    ).all()
+
+    # Only one property
+    assert (
+        get_property_means(soilgrids_values[0], [property_names[0]])
+        == expected_means[0]
+    )
+
+    # Invalid input formats
+    with pytest.raises(ValueError):
+        get_property_means(soilgrids_values[0], property_names)
+
+
+def test_soil_data_to_txt_file(tmp_path):
+    """Test soil_data_to_txt_file function."""
+    coordinates = {"lat": 12.123456789, "lon": 99.9}
+    composition_data = np.array([range(1, 7), range(11, 17), range(21, 27)])
+    hihydrosoil_data = np.array(
+        [range(31, 37), range(41, 47), range(51, 57), range(61, 67)]
+    )
+    file_name = tmp_path / "soil_data.txt"
+
+    # Expected data in final file
+    composition_expected = (
+        get_property_means(
+            map_depths_soilgrids_grassland_model(
+                composition_data, ["silt", "clay", "sand"]
+            ),
+            ["silt", "clay", "sand"],
+        )
+        / 100.0  # convert from percentage
+    )
+    hhs_expected = map_depths_soilgrids_grassland_model(
+        hihydrosoil_data,
+        property_names=list(HIHYDROSOIL_SPECS.keys()),
+        conversion_factor=[specs["hhs_to_gmd"] for specs in HIHYDROSOIL_SPECS.values()],
+        conversion_units=[specs["gmd_unit"] for specs in HIHYDROSOIL_SPECS.values()],
+    ).T  # transpose to match expected output format
+
+    soil_data_to_txt_file(
+        coordinates,
+        composition_data,
+        hihydrosoil_data,
+        file_name=file_name,
+    )
+
+    # Check file content
+    assert file_name.is_file()
+    with open(file_name, "r") as f:
+        content = f.readlines()
+
+        assert len(content) == 24
+        assert content[0] == "Silt\tClay\tSand\n"
+
+        # Composition data (means)
+        assert (
+            content[1]
+            == f"{composition_expected[0]:.4f}\t{composition_expected[1]:.4f}\t{composition_expected[2]:.4f}\n"
+        )
+        assert content[2] == "\n"
+        assert content[3] == "Layer\tFC[V%]\tPWP[V%]\tPOR[V%]\tKS[mm/d]\n"
+
+        # HiHydroSoil data (20 layers)
+        for i in range(20):
+            assert (
+                content[i + 4]
+                == f"{i + 1:.4f}\t{hhs_expected[i][0]:.4f}\t{hhs_expected[i][1]:.4f}\t{hhs_expected[i][2]:.4f}\t{hhs_expected[i][3]:.4f}\n"
+            )

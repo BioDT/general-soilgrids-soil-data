@@ -366,8 +366,54 @@ def get_hihydrosoil_data(coordinates, *, cache=None):
     return property_data, query_protocol
 
 
+def check_property_shapes(property_data, property_names, *, depths_required=6):
+    """
+    Check the shape of the property data array and raise an error if it does not match the expected dimensions.
+
+    Parameters:
+        property_data (numpy.ndarray): Array containing property data.
+        property_names (list): List of property names.
+        depths_required (int): Number of required depths (default is 6 for SoilGrids,
+            use None for not checking layer number).
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If the shape of property_data does not match the expected dimensions.
+    """
+    if property_data.ndim == 1:
+        property_count = 1
+        layer_count = len(property_data)
+    else:
+        property_count = property_data.shape[0]
+        layer_count = property_data.shape[1]
+
+    if depths_required is not None and layer_count != depths_required:
+        try:
+            raise ValueError(
+                f"Property data layers ({layer_count}) do not match the number of required depths ({depths_required})!"
+            )
+        except ValueError as e:
+            logger.error(e)
+            raise
+
+    if property_count != len(property_names):
+        try:
+            raise ValueError(
+                f"Property data shape ({property_count} rows) does not match the number of property names ({len(property_names)})!"
+            )
+        except ValueError as e:
+            logger.error(e)
+            raise
+
+
 def map_depths_soilgrids_grassland_model(
-    property_data, property_names, *, conversion_factor=1, conversion_units=None
+    property_data,
+    property_names,
+    *,
+    conversion_factor=1,
+    conversion_units=None,
 ):
     """
     Map data from SoilGrids depths to grassland model depths.
@@ -376,7 +422,7 @@ def map_depths_soilgrids_grassland_model(
         property_data (numpy.ndarray): Array containing property data.
         property_names (list): List of property names.
         conversion_factor (float or array): Conversion factors to apply to the values (default is 1).
-        conversion_units (list, optional): List of units after conversion for each property (default is 'None').
+        conversion_units (list): List of units after conversion for each property (default is 'None').
 
     Returns:
         numpy.ndarray: Array containing mapped property values.
@@ -389,6 +435,11 @@ def map_depths_soilgrids_grassland_model(
 
     # Define SoilGrids depths boundaries
     old_depths = np.array([[0, 5], [5, 15], [15, 30], [30, 60], [60, 100], [100, 200]])
+
+    # Check correct shape of property_data
+    check_property_shapes(
+        property_data, property_names, depths_required=len(old_depths)
+    )
 
     # Prepare conversion factors and units
     if isinstance(conversion_factor, float):
@@ -441,13 +492,20 @@ def get_property_means(property_data, property_names, *, property_units=None):
     Parameters:
         property_data (numpy.ndarray): Array containing property data.
         property_names (list): List of property names.
-        property_units (list, optional): List of units for each property (default is 'None').
+        property_units (list): List of units for each property (default is 'None').
 
     Returns:
         numpy.ndarray: Array containing property means.
     """
+    # Check correct shape of property_data, any number of layers allowed
+    check_property_shapes(property_data, property_names, depths_required=None)
+
     logger.info("Averaging data over all depths ...")
-    property_means = np.mean(property_data, axis=1)
+
+    if property_data.ndim == 1:
+        property_means = [np.mean(property_data)]
+    else:
+        property_means = np.mean(property_data, axis=1)
 
     if property_units is None:
         property_units = [""] * len(property_names)
@@ -465,8 +523,8 @@ def soil_data_to_txt_file(
     coordinates,
     composition_data,
     hihydrosoil_data,
-    data_query_protocol,
     *,
+    data_query_protocol=None,
     file_name=None,
     composition_property_names=["silt", "clay", "sand"],
     # nitrogen_data,
@@ -479,7 +537,7 @@ def soil_data_to_txt_file(
         composition_data (numpy.ndarray): SoilGrids data array.
         composition_property_names (list): Names of SoilGrids properties.
         hihydrosoil_data (numpy.ndarray): HiHydroSoil data array.
-        data_query_protocol (list): List of sources and time stamps from retrieving soil data.
+        data_query_protocol (list): List of sources and time stamps from retrieving soil data (default is None).
         file_name (str or Path): File name to save soil data (default is None, default file name is used if not provided).
 
     Returns:
@@ -491,7 +549,9 @@ def soil_data_to_txt_file(
     # Prepare SoilGrids composition data in grassland model format
     composition_to_gmd = 1e-2  # % to proportions for all composition values
     composition_data_gmd = map_depths_soilgrids_grassland_model(
-        composition_data, composition_property_names, composition_to_gmd
+        composition_data,
+        property_names=composition_property_names,
+        conversion_factor=composition_to_gmd,
     )
 
     # Mean over all depths
@@ -506,7 +566,10 @@ def soil_data_to_txt_file(
     ]
     hhs_units_gmd = [specs["gmd_unit"] for specs in HIHYDROSOIL_SPECS.values()]
     hhs_data_gmd = map_depths_soilgrids_grassland_model(
-        hihydrosoil_data, hhs_property_names, hhs_conversion_factor, hhs_units_gmd
+        hihydrosoil_data,
+        property_names=hhs_property_names,
+        conversion_factor=hhs_conversion_factor,
+        conversion_units=hhs_units_gmd,
     )
 
     # Write collected soil data to TXT file
