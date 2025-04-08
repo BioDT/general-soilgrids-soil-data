@@ -53,45 +53,45 @@ from soilgrids import utils as ut
 from soilgrids.logger_config import logger
 
 # Define HiHydroSoil variable specifications, including:
-#     hhs_name: HiHydroSoil variable name.
-#     hhs_unit: HiHydroSoil unit.
+#     hihydrosoil_name: HiHydroSoil variable name.
+#     hihydrosoil_unit: HiHydroSoil unit.
 #     map_to_float: Conversion factor from HiHydroSoil integer map value to actual float number.
-#     hhs_to_gmd: Conversion factor from HiHydroSoil unit to grassland model unit.
-#     gmd_unit: Grassland model unit.
-#     gmd_name: Grassland model variable name, as used in final soil data file.
+#     hihydrosoil_to_grassmodel: Conversion factor from HiHydroSoil unit to grassland model unit.
+#     grassmodel_unit: Grassland model unit.
+#     grassmodel_name: Grassland model variable name, as used in final soil data file.
 HIHYDROSOIL_SPECS = MappingProxyType(
     {
         "field capacity": {
-            "hhs_name": "WCpF2",
-            "hhs_unit": "m³/m³",
+            "hihydrosoil_name": "WCpF2",
+            "hihydrosoil_unit": "m³/m³",
             "map_to_float": 1e-4,
-            "hhs_to_gmd": 1e2,  # to %
-            "gmd_unit": "V%",
-            "gmd_name": "FC[V%]",
+            "hihydrosoil_to_grassmodel": 1e2,  # to %
+            "grassmodel_unit": "V%",
+            "grassmodel_name": "FC[V%]",
         },
         "permanent wilting point": {
-            "hhs_name": "WCpF4.2",
-            "hhs_unit": "m³/m³",
+            "hihydrosoil_name": "WCpF4.2",
+            "hihydrosoil_unit": "m³/m³",
             "map_to_float": 1e-4,
-            "hhs_to_gmd": 1e2,  # to %
-            "gmd_unit": "V%",
-            "gmd_name": "PWP[V%]",
+            "hihydrosoil_to_grassmodel": 1e2,  # to %
+            "grassmodel_unit": "V%",
+            "grassmodel_name": "PWP[V%]",
         },
         "soil porosity": {
-            "hhs_name": "WCsat",
-            "hhs_unit": "m³/m³",
+            "hihydrosoil_name": "WCsat",
+            "hihydrosoil_unit": "m³/m³",
             "map_to_float": 1e-4,
-            "hhs_to_gmd": 1e2,  # to %
-            "gmd_unit": "V%",
-            "gmd_name": "POR[V%]",
+            "hihydrosoil_to_grassmodel": 1e2,  # to %
+            "grassmodel_unit": "V%",
+            "grassmodel_name": "POR[V%]",
         },
         "saturated hydraulic conductivity": {
-            "hhs_name": "Ksat",
-            "hhs_unit": "cm/d",
+            "hihydrosoil_name": "Ksat",
+            "hihydrosoil_unit": "cm/d",
             "map_to_float": 1e-4,
-            "hhs_to_gmd": 1e1,  # cm to mm
-            "gmd_unit": "mm/d",
-            "gmd_name": "KS[mm/d]",
+            "hihydrosoil_to_grassmodel": 1e1,  # cm to mm
+            "grassmodel_unit": "mm/d",
+            "grassmodel_name": "KS[mm/d]",
         },
     }
 )
@@ -335,19 +335,28 @@ def get_hihydrosoil_data(coordinates, *, cache=None):
         - List of query sources and time stamps.
     """
     logger.info("Reading HiHydroSoil data ...")
-    hhs_depths = ["0-5cm", "5-15cm", "15-30cm", "30-60cm", "60-100cm", "100-200cm"]
+    hihydrosoil_depths = [
+        "0-5cm",
+        "5-15cm",
+        "15-30cm",
+        "30-60cm",
+        "60-100cm",
+        "100-200cm",
+    ]
 
     # Initialize property_data array with zeros
     property_data = np.full(
-        (len(HIHYDROSOIL_SPECS), len(hhs_depths)), np.nan, dtype=float
+        (len(HIHYDROSOIL_SPECS), len(hihydrosoil_depths)), np.nan, dtype=float
     )
 
     # Extract values from tif maps for each property and depth
     query_protocol = []
 
     for p_index, (p_name, p_specs) in enumerate(HIHYDROSOIL_SPECS.items()):
-        for d_index, depth in enumerate(hhs_depths):
-            map_file = get_hihydrosoil_map_file(p_specs["hhs_name"], depth, cache=cache)
+        for d_index, depth in enumerate(hihydrosoil_depths):
+            map_file = get_hihydrosoil_map_file(
+                p_specs["hihydrosoil_name"], depth, cache=cache
+            )
 
             if map_file:
                 # Extract and convert value
@@ -360,7 +369,7 @@ def get_hihydrosoil_data(coordinates, *, cache=None):
 
             logger.info(
                 f"Depth {depth}, {p_name}: "
-                f"{property_data[p_index, d_index]:.4f} {p_specs['hhs_unit']}"
+                f"{property_data[p_index, d_index]:.4f} {p_specs['hihydrosoil_unit']}"
             )
 
     return property_data, query_protocol
@@ -547,29 +556,31 @@ def soil_data_to_txt_file(
     # SoilGrids composition part for all depths in commits before 2024-09-30
 
     # Prepare SoilGrids composition data in grassland model format
-    composition_to_gmd = 1e-2  # % to proportions for all composition values
-    composition_data_gmd = map_depths_soilgrids_grassland_model(
+    composition_to_grassmodel = 1e-2  # % to proportions for all composition values
+    composition_data_grassmodel = map_depths_soilgrids_grassland_model(
         composition_data,
         property_names=composition_property_names,
-        conversion_factor=composition_to_gmd,
+        conversion_factor=composition_to_grassmodel,
     )
 
     # Mean over all depths
     composition_data_mean = get_property_means(
-        composition_data_gmd, composition_property_names
+        composition_data_grassmodel, composition_property_names
     )
 
     # Prepare HiHydroSoil data in grassland model format
-    hhs_property_names = list(HIHYDROSOIL_SPECS.keys())
-    hhs_conversion_factor = [
-        specs["hhs_to_gmd"] for specs in HIHYDROSOIL_SPECS.values()
+    hihydrosoil_property_names = list(HIHYDROSOIL_SPECS.keys())
+    hihydrosoil_conversion_factor = [
+        specs["hihydrosoil_to_grassmodel"] for specs in HIHYDROSOIL_SPECS.values()
     ]
-    hhs_units_gmd = [specs["gmd_unit"] for specs in HIHYDROSOIL_SPECS.values()]
-    hhs_data_gmd = map_depths_soilgrids_grassland_model(
+    hihydrosoil_units_grassmodel = [
+        specs["grassmodel_unit"] for specs in HIHYDROSOIL_SPECS.values()
+    ]
+    hihydrosoil_data_grassmodel = map_depths_soilgrids_grassland_model(
         hihydrosoil_data,
-        property_names=hhs_property_names,
-        conversion_factor=hhs_conversion_factor,
-        conversion_units=hhs_units_gmd,
+        property_names=hihydrosoil_property_names,
+        conversion_factor=hihydrosoil_conversion_factor,
+        conversion_units=hihydrosoil_units_grassmodel,
     )
 
     # Write collected soil data to TXT file
@@ -596,22 +607,25 @@ def soil_data_to_txt_file(
     )
 
     # HiHydroSoil part
-    hhs_data_to_write = shape_soildata_for_file(hhs_data_gmd)
-    gmd_depth_count = np.arange(1, 21).reshape(-1, 1)
-    hhs_data_to_write = np.concatenate(
-        (gmd_depth_count, hhs_data_to_write[:, :2], hhs_data_to_write[:, 2:4]), axis=1
+    hihydrosoil_data_to_write = shape_soildata_for_file(hihydrosoil_data_grassmodel)
+    grassmodel_depth_count = np.arange(1, 21).reshape(-1, 1)
+    hihydrosoil_data_to_write = np.concatenate(
+        (grassmodel_depth_count, hihydrosoil_data_to_write),
+        axis=1,
     )
-    gmd_names = [specs["gmd_name"] for specs in HIHYDROSOIL_SPECS.values()]
-    hhs_header = "\t".join(map(str, ["Layer"] + gmd_names))
+    grassmodel_names = [
+        specs["grassmodel_name"] for specs in HIHYDROSOIL_SPECS.values()
+    ]
+    hihydrosoil_header = "\t".join(map(str, ["Layer"] + grassmodel_names))
 
     with open(file_name, "a", encoding="utf-8", errors="replace") as fh:
         fh.write("\n")
         np.savetxt(
             fh,
-            hhs_data_to_write,
+            hihydrosoil_data_to_write,
             delimiter="\t",
             fmt="%.4f",
-            header=hhs_header,
+            header=hihydrosoil_header,
             comments="",
         )
 

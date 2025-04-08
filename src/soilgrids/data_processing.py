@@ -45,14 +45,14 @@ from soilgrids import get_soil_data as gsd
 from soilgrids.logger_config import logger
 
 
-def data_processing(coordinates, *, file_name=None, hhs_cache=None):
+def data_processing(coordinates, *, file_name=None, hihydrosoil_cache=None):
     """
     Download data from SoilGrids and HiHydroSoil maps. Convert to .txt files.
 
     Parameters:
         coordinates (dict): Dictionary with 'lat' and 'lon' keys ({'lat': float, 'lon': float}).
         file_name (str or Path): File name to save soil data (default is None, default file name is used if not provided).
-        hhs_cache (Path): Path for local HiHydroSoil map directory (optional).
+        hihydrosoil_cache (Path): Path for local HiHydroSoil map directory (optional).
     """
     # SoilGrids nitrogen part of the data in commits before 2024-09-30
 
@@ -77,7 +77,7 @@ def data_processing(coordinates, *, file_name=None, hhs_cache=None):
 
     # HiHydroSoil part of the data
     hihydrosoil_data, hihydrosoil_queries = gsd.get_hihydrosoil_data(
-        coordinates, cache=hhs_cache
+        coordinates, cache=hihydrosoil_cache
     )
     data_query_protocol.extend(hihydrosoil_queries)
 

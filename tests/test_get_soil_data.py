@@ -212,7 +212,7 @@ def test_get_hihydrosoil_map_file(tmp_path, caplog):
 def test_get_hihydrosoil_data():
     """Test get_hihydrosoil_data function."""
     coordinates = {"lat": 50.0, "lon": 10.0}
-    hhs_data, query_protocol = get_hihydrosoil_data(coordinates)
+    hihydrosoil_data, query_protocol = get_hihydrosoil_data(coordinates)
     layer_count = 6
 
     # Check query protocol
@@ -231,8 +231,8 @@ def test_get_hihydrosoil_data():
         assert len(query[1].split("T")) == 2
 
     # Check data
-    assert hhs_data.shape == (len(HIHYDROSOIL_SPECS), layer_count)
-    for row in hhs_data:
+    assert hihydrosoil_data.shape == (len(HIHYDROSOIL_SPECS), layer_count)
+    for row in hihydrosoil_data:
         assert all(np.isnan(row) | np.isfinite(row))  # allow NaN
         assert all(row[np.isfinite(row)] >= 0.0)  # no negative values
 
@@ -243,8 +243,6 @@ def test_check_property_shapes(caplog):
     property_names = ["test_var_1", "test_var_2"]
 
     assert check_property_shapes(soilgrids_values, property_names) is None
-
-    # Omit check of layer numbers
 
     # Test invalid input formats
     with caplog.at_level("ERROR"):
@@ -319,7 +317,7 @@ def test_get_property_means():
         == expected_means[0]
     )
 
-    # Invalid input formats
+    # Invalid input formats (more properties than data rows)
     with pytest.raises(ValueError):
         get_property_means(soilgrids_values[0], property_names)
 
@@ -343,11 +341,15 @@ def test_soil_data_to_txt_file(tmp_path):
         )
         / 100.0  # convert from percentage
     )
-    hhs_expected = map_depths_soilgrids_grassland_model(
+    hihydrosoil_expected = map_depths_soilgrids_grassland_model(
         hihydrosoil_data,
         property_names=list(HIHYDROSOIL_SPECS.keys()),
-        conversion_factor=[specs["hhs_to_gmd"] for specs in HIHYDROSOIL_SPECS.values()],
-        conversion_units=[specs["gmd_unit"] for specs in HIHYDROSOIL_SPECS.values()],
+        conversion_factor=[
+            specs["hihydrosoil_to_grassmodel"] for specs in HIHYDROSOIL_SPECS.values()
+        ],
+        conversion_units=[
+            specs["grassmodel_unit"] for specs in HIHYDROSOIL_SPECS.values()
+        ],
     ).T  # transpose to match expected output format
 
     soil_data_to_txt_file(
@@ -368,7 +370,8 @@ def test_soil_data_to_txt_file(tmp_path):
         # Composition data (means)
         assert (
             content[1]
-            == f"{composition_expected[0]:.4f}\t{composition_expected[1]:.4f}\t{composition_expected[2]:.4f}\n"
+            == f"{composition_expected[0]:.4f}\t{composition_expected[1]:.4f}\t"
+            f"{composition_expected[2]:.4f}\n"
         )
         assert content[2] == "\n"
         assert content[3] == "Layer\tFC[V%]\tPWP[V%]\tPOR[V%]\tKS[mm/d]\n"
@@ -377,5 +380,6 @@ def test_soil_data_to_txt_file(tmp_path):
         for i in range(20):
             assert (
                 content[i + 4]
-                == f"{i + 1:.4f}\t{hhs_expected[i][0]:.4f}\t{hhs_expected[i][1]:.4f}\t{hhs_expected[i][2]:.4f}\t{hhs_expected[i][3]:.4f}\n"
+                == f"{i + 1:.4f}\t{hihydrosoil_expected[i][0]:.4f}\t{hihydrosoil_expected[i][1]:.4f}\t"
+                f"{hihydrosoil_expected[i][2]:.4f}\t{hihydrosoil_expected[i][3]:.4f}\n"
             )
