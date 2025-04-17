@@ -2,6 +2,11 @@
 Building block for downloading and processing selected soil data at given location from
    SoilGrids and derived data sources (Soilgrids REST API, HiHydroSoil maps).
 
+## Installation
+The current development version can be installed as:
+
+    pip install git+https://github.com/BioDT/general-soilgrids-soil-data.git@main
+    
 ## Usage
 Request data for a location and produce .txt files in grassland model input data format:
 
