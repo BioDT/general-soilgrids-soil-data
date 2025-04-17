@@ -52,7 +52,7 @@ def data_processing(coordinates, *, file_name=None, hihydrosoil_cache=None):
     Parameters:
         coordinates (dict): Dictionary with 'lat' and 'lon' keys ({'lat': float, 'lon': float}).
         file_name (str or Path): File name to save soil data (default is None, default file name is used if not provided).
-        hihydrosoil_cache (Path): Path for local HiHydroSoil map directory (optional).
+        hihydrosoil_cache (Path): Path for local HiHydroSoil map directory (default is None, online data is used if not provided).
     """
     # SoilGrids nitrogen part of the data in commits before 2024-09-30
 

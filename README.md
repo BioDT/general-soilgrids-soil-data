@@ -3,13 +3,23 @@ Building block for downloading and processing selected soil data at given locati
    SoilGrids and derived data sources (Soilgrids REST API, HiHydroSoil maps).
 
 ## Usage
-Call "data_processing(coordinates, *, file_name=file_name, hihydrosoil_cache=hihydrosoil_cache)" 
-to download data for a given location and produce .txt files in grassland model input data format.
+Request data for a location and produce .txt files in grassland model input data format:
+
+```python
+from soilgrids import data_processing
+
+coordinates = {"lat": 51.123456, "lon": 11.987654}
+data_processing(coordinates)
+```
+
+Full function signature: 
+
+`data_processing(coordinates, *, file_name=None, hihydrosoil_cache=None)` 
 
 Parameters:
 - coordinates (dict): Dictionary with `lat` and `lon` keys ({`lat`: float, `lon`: float}).
-- file_name (str or Path): File name to save soil data (optional, default file name is used if not provided).
-- hihydrosoil_cache (Path): Path for local HiHydroSoil map directory (optional).
+- file_name (str or Path): File name to save soil data (default is None, default file name is used if not provided).
+- hihydrosoil_cache (Path): Path for local HiHydroSoil map directory (default is None, online data is used if not provided).
 
 ## Developers
 Developed in the BioDT project by Thomas Banitz (UFZ) with contributions by Franziska Taubert (UFZ), 
