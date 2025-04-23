@@ -1,6 +1,6 @@
 """
-Module Name: test_get_soil_data.py
-Description: Test get_soil_data functions for soilgrids building block.
+Module Name: test_download_soil_data.py
+Description: Test download_soil_data functions for soilgrids building block.
 
 Developed in the BioDT project by Thomas Banitz (UFZ) with contributions by Franziska Taubert (UFZ)
 and Tuomas Rossi (CSC).
@@ -28,7 +28,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from soilgrids.get_soil_data import (
+from soilgrids.download_soil_data import (
     HIHYDROSOIL_SPECS,
     check_property_shapes,
     configure_soilgrids_request,

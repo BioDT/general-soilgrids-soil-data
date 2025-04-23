@@ -41,7 +41,7 @@ Data sources:
       http://opendap.biodt.eu/grasslands-pdt/soilMapsHiHydroSoil/
 """
 
-from soilgrids import get_soil_data as gsd
+from soilgrids import download_soil_data as dsd
 from soilgrids.logger_config import logger
 
 
@@ -70,18 +70,18 @@ def data_processing(coordinates, *, file_name=None, hihydrosoil_cache=None):
             raise
 
     # SoilGrids composition part of the data
-    composition_request = gsd.configure_soilgrids_request(coordinates)
-    composition_raw, time_stamp = gsd.download_soilgrids(composition_request)
+    composition_request = dsd.configure_soilgrids_request(coordinates)
+    composition_raw, time_stamp = dsd.download_soilgrids(composition_request)
     data_query_protocol = [[composition_request["url"], time_stamp]]
-    composition_data = gsd.get_soilgrids_data(composition_raw)
+    composition_data = dsd.get_soilgrids_data(composition_raw)
 
     # HiHydroSoil part of the data
-    hihydrosoil_data, hihydrosoil_queries = gsd.get_hihydrosoil_data(
+    hihydrosoil_data, hihydrosoil_queries = dsd.get_hihydrosoil_data(
         coordinates, cache=hihydrosoil_cache
     )
     data_query_protocol.extend(hihydrosoil_queries)
 
-    gsd.soil_data_to_txt_file(
+    dsd.soil_data_to_txt_file(
         coordinates,
         composition_data,
         hihydrosoil_data,

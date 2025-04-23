@@ -1,5 +1,5 @@
 """
-Module Name: get_soil_data.py
+Module Name: download_soil_data.py
 Description: Functions for downloading and processing selected soil data at given location from
              SoilGrids and derived data sources (SoilGrids REST API, HiHydroSoil maps).
 
