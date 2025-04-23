@@ -1,5 +1,5 @@
 """
-Module Name: data_processing.py
+Module Name: get_soil_data.py
 Description: Function for obtaining selected soil data at given location from
              SoilGrids and derived data sources (SoilGrids REST API, HiHydroSoil maps).
 
@@ -45,7 +45,7 @@ from soilgrids import download_soil_data as dsd
 from soilgrids.logger_config import logger
 
 
-def data_processing(coordinates, *, file_name=None, hihydrosoil_cache=None):
+def get_soil_data(coordinates, *, file_name=None, hihydrosoil_cache=None):
     """
     Download data from SoilGrids and HiHydroSoil maps. Convert to .txt files.
 

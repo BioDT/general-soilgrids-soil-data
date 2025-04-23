@@ -1,3 +1,3 @@
-from .data_processing import data_processing
+from .get_soil_data import get_soil_data
 
-__all__ = ["data_processing"]
+__all__ = ["get_soil_data"]

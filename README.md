@@ -11,15 +11,15 @@ The current development version can be installed as:
 Request data for a location and produce .txt files in grassland model input data format:
 
 ```python
-from soilgrids import data_processing
+from soilgrids import get_soil_data
 
 coordinates = {"lat": 51.123456, "lon": 11.987654}
-data_processing(coordinates)
+get_soil_data(coordinates)
 ```
 
 Full function signature: 
 
-`data_processing(coordinates, *, file_name=None, hihydrosoil_cache=None)` 
+`get_soil_data(coordinates, *, file_name=None, hihydrosoil_cache=None)` 
 
 Parameters:
 - coordinates (dict): Dictionary with 'lat' and 'lon' keys ({'lat': float, 'lon': float}).
