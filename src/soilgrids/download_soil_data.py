@@ -242,7 +242,8 @@ def download_soilgrids(request, *, attempts=6, delay_exponential=8, delay_linear
                 time.sleep(delay_linear)
 
     # After exhausting all attempts
-    raise Exception("Maximum number of attempts reached. Failed to download data.")
+    logger.error("Maximum number of attempts reached. Failed to download data.")
+    return None, time_stamp
 
 
 def get_soilgrids_data(soilgrids_data, *, property_names=["silt", "clay", "sand"]):
@@ -258,34 +259,45 @@ def get_soilgrids_data(soilgrids_data, *, property_names=["silt", "clay", "sand"
     """
     logger.info("Reading SoilGrids data ...")
 
-    # Initialize property_data array with zeros
-    property_data = np.full(
-        (len(property_names), len(soilgrids_data["properties"]["layers"][0]["depths"])),
-        np.nan,
-        dtype=float,
-    )
+    # handle case when soilgrids_data is None or empty
+    if soilgrids_data is None or not soilgrids_data:
+        logger.error(
+            "No data found in SoilGrids response. Cannot extract property data."
+        )
+        return None
+    else:
+        # Initialize property_data array with zeros
+        property_data = np.full(
+            (
+                len(property_names),
+                len(soilgrids_data["properties"]["layers"][0]["depths"]),
+            ),
+            np.nan,
+            dtype=float,
+        )
 
-    # Iterate through property_names
-    for p_index, p_name in enumerate(property_names):
-        # Find the corresponding property in soilgrids_data
-        for prop in soilgrids_data["properties"]["layers"]:
-            if prop["name"] == p_name:
-                p_units = prop["unit_measure"]["target_units"]
+        # Iterate through property_names
+        for p_index, p_name in enumerate(property_names):
+            # Find the corresponding property in soilgrids_data
+            for prop in soilgrids_data["properties"]["layers"]:
+                if prop["name"] == p_name:
+                    p_units = prop["unit_measure"]["target_units"]
 
-                # Iterate through depths and fill the property_data array
-                for d_index, depth in enumerate(prop["depths"]):
-                    if depth["values"]["mean"]:
-                        property_data[p_index, d_index] = (
-                            depth["values"]["mean"] / prop["unit_measure"]["d_factor"]
+                    # Iterate through depths and fill the property_data array
+                    for d_index, depth in enumerate(prop["depths"]):
+                        if depth["values"]["mean"]:
+                            property_data[p_index, d_index] = (
+                                depth["values"]["mean"]
+                                / prop["unit_measure"]["d_factor"]
+                            )
+
+                        logger.info(
+                            f"Depth {depth['label']}, {p_name} "
+                            f"mean: {property_data[p_index, d_index]} {p_units}"
                         )
+                    break  # Stop searching once the correct property is found
 
-                    logger.info(
-                        f"Depth {depth['label']}, {p_name} "
-                        f"mean: {property_data[p_index, d_index]} {p_units}"
-                    )
-                break  # Stop searching once the correct property is found
-
-    return property_data
+        return property_data
 
 
 def get_hihydrosoil_map_file(property_name, depth, *, cache=None):
@@ -555,18 +567,26 @@ def soil_data_to_txt_file(
     # SoilGrids nitrogen part of the data in commits before 2024-09-30
     # SoilGrids composition part for all depths in commits before 2024-09-30
 
-    # Prepare SoilGrids composition data in grassland model format
-    composition_to_grassmodel = 1e-2  # % to proportions for all composition values
-    composition_data_grassmodel = map_depths_soilgrids_grassland_model(
-        composition_data,
-        property_names=composition_property_names,
-        conversion_factor=composition_to_grassmodel,
-    )
+    if composition_data is None:
+        logger.error(
+            "No data found in SoilGrids response. Assuming 0 for all composition values."
+        )
+        composition_data_mean = np.zeros(
+            (len(composition_property_names), 1), dtype=float
+        )
+    else:
+        # Prepare SoilGrids composition data in grassland model format
+        composition_to_grassmodel = 1e-2  # % to proportions for all composition values
+        composition_data_grassmodel = map_depths_soilgrids_grassland_model(
+            composition_data,
+            property_names=composition_property_names,
+            conversion_factor=composition_to_grassmodel,
+        )
 
-    # Mean over all depths
-    composition_data_mean = get_property_means(
-        composition_data_grassmodel, composition_property_names
-    )
+        # Mean over all depths
+        composition_data_mean = get_property_means(
+            composition_data_grassmodel, composition_property_names
+        )
 
     # Prepare HiHydroSoil data in grassland model format
     hihydrosoil_property_names = list(HIHYDROSOIL_SPECS.keys())
