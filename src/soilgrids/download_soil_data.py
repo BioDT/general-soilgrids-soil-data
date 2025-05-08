@@ -199,10 +199,7 @@ def download_soilgrids(request, *, attempts=6, delay_exponential=8, delay_linear
         delay_linear (int): Delay in seconds for gateway errors and other failed requests (default is 2).
 
     Returns:
-        tuple: JSON response data (dict) and time stamp.
-
-    Raises:
-        Exception: If the download fails after all attempts, raises an exception with the error message and status code.
+        tuple: JSON response data (dict) or None if download failed, and time stamp of the request.
     """
     logger.info(f"SoilGrids REST API download from {request['url']} ... ")
     status_codes_rate = {429}  # codes for retry with exponentially increasing delay
@@ -555,11 +552,12 @@ def soil_data_to_txt_file(
 
     Parameters:
         coordinates (dict): Dictionary with 'lat' and 'lon' keys ({'lat': float, 'lon': float}).
-        composition_data (numpy.ndarray): SoilGrids data array.
-        composition_property_names (list): Names of SoilGrids properties.
+        composition_data (numpy.ndarray): SoilGrids data array (if None, the following highly uncertain
+            default values are used: Silt 40%, Clay 20%, Sand 40%).
         hihydrosoil_data (numpy.ndarray): HiHydroSoil data array.
         data_query_protocol (list): List of sources and time stamps from retrieving soil data (default is None).
         file_name (str or Path): File name to save soil data (default is None, default file name is used if not provided).
+        composition_property_names (list): List of property names for SoilGrids data (default is ['silt', 'clay', 'sand']).
 
     Returns:
         None
@@ -567,13 +565,13 @@ def soil_data_to_txt_file(
     # SoilGrids nitrogen part of the data in commits before 2024-09-30
     # SoilGrids composition part for all depths in commits before 2024-09-30
 
+    logger.info("Writing soil compostion data to file ...")
+
     if composition_data is None:
         logger.error(
-            "No data found in SoilGrids response. Assuming 0 for all composition values."
+            "No data found in SoilGrids response. Assuming highly uncertain default composition values: Silt 40%, Clay 20%, Sand 40%."
         )
-        composition_data_mean = np.zeros(
-            (len(composition_property_names), 1), dtype=float
-        )
+        composition_data_mean = np.array([0.4, 0.2, 0.4])
     else:
         # Prepare SoilGrids composition data in grassland model format
         composition_to_grassmodel = 1e-2  # % to proportions for all composition values
@@ -589,6 +587,8 @@ def soil_data_to_txt_file(
         )
 
     # Prepare HiHydroSoil data in grassland model format
+    logger.info("Writing soil hydraulic properties data to file ...")
+
     hihydrosoil_property_names = list(HIHYDROSOIL_SPECS.keys())
     hihydrosoil_conversion_factor = [
         specs["hihydrosoil_to_grassmodel"] for specs in HIHYDROSOIL_SPECS.values()
