@@ -116,6 +116,13 @@ def test_download_soilgrids():
     request = configure_soilgrids_request(coordinates)
     json_data, time_stamp = download_soilgrids(request)
 
+    # remove DOWNLOAD FAILED! from time_stamp
+    if time_stamp.startswith("DOWNLOAD FAILED! "):
+        time_stamp = time_stamp[17:]
+        download_successful = False
+    else:
+        download_successful = True
+
     # Check time stamp format is 'yyyy-mm-ddThh:mm:ss+00:00'
     assert time_stamp.endswith("+00:00")
     assert len(time_stamp) == 25
@@ -123,25 +130,26 @@ def test_download_soilgrids():
     assert len(time_stamp.split("T")) == 2
 
     # Check structure and some content of JSON data
-    assert json_data is not None
-    assert isinstance(json_data, dict)
-    assert "properties" in json_data
+    if download_successful:
+        assert json_data is not None
+        assert isinstance(json_data, dict)
+        assert "properties" in json_data
 
-    layer_names = []
+        layer_names = []
 
-    for layer in json_data["properties"]["layers"]:
-        layer_names.append(layer["name"])
+        for layer in json_data["properties"]["layers"]:
+            layer_names.append(layer["name"])
 
-        assert "unit_measure" in layer
-        assert len(layer["depths"]) == 6
+            assert "unit_measure" in layer
+            assert len(layer["depths"]) == 6
 
-        # Check for the first depth
-        top_layer = layer["depths"][0]
-        assert top_layer["label"] == "0-5cm"
-        assert "mean" in top_layer["values"]
+            # Check for the first depth
+            top_layer = layer["depths"][0]
+            assert top_layer["label"] == "0-5cm"
+            assert "mean" in top_layer["values"]
 
-    layer_names.sort()
-    assert layer_names == ["clay", "sand", "silt"]
+        layer_names.sort()
+        assert layer_names == ["clay", "sand", "silt"]
 
 
 def test_get_soilgrids_data():
@@ -149,19 +157,22 @@ def test_get_soilgrids_data():
     coordinates = {"lat": 12.123456789, "lon": 99.9}
     request = configure_soilgrids_request(coordinates)
     json_data, _ = download_soilgrids(request)
-    property_names = ["silt", "clay", "sand"]
-    layer_count = 6
-    property_data = get_soilgrids_data(json_data)
 
-    assert np.shape(property_data) == (len(property_names), layer_count)
+    # JSON data can be None if download failed
+    if json_data is not None:
+        property_names = ["silt", "clay", "sand"]
+        layer_count = 6
+        property_data = get_soilgrids_data(json_data)
 
-    # Check that values are valid and sum to 100% for each layer
-    for index in range(layer_count):
-        assert np.sum(property_data[:, index]) == pytest.approx(
-            100.0, abs=1e-1
-        )  # allow 0.1% error
-        assert all(property_data[:, index] >= 0.0)
-        assert all(property_data[:, index] <= 100.0)
+        assert np.shape(property_data) == (len(property_names), layer_count)
+
+        # Check that values are valid and sum to 100% for each layer
+        for index in range(layer_count):
+            assert np.sum(property_data[:, index]) == pytest.approx(
+                100.0, abs=1e-1
+            )  # allow 0.1% error
+            assert all(property_data[:, index] >= 0.0)
+            assert all(property_data[:, index] <= 100.0)
 
 
 def test_get_hihydrosoil_map_file(tmp_path, caplog):
@@ -187,7 +198,7 @@ def test_get_hihydrosoil_map_file(tmp_path, caplog):
             get_hihydrosoil_map_file(property_name, depth, cache=tmp_path)
             == expected_url
         )
-        assert f"Local file '{local_file}' not found!" in caplog.text
+        assert f"Local file '{local_file}' not found." in caplog.text
 
     caplog.clear()
 
@@ -198,13 +209,13 @@ def test_get_hihydrosoil_map_file(tmp_path, caplog):
     with caplog.at_level("ERROR"):
         assert get_hihydrosoil_map_file("invalid_property", depth) is None
         assert (
-            f"File '{opendap_folder}invalid_property_{depth}_M_250m.tif' not found!"
+            f"File '{opendap_folder}invalid_property_{depth}_M_250m.tif' not found."
             in caplog.text
         )
 
         assert get_hihydrosoil_map_file(property_name, "invalid_depth") is None
         assert (
-            f"File '{opendap_folder}{property_name}_invalid_depth_M_250m.tif' not found!"
+            f"File '{opendap_folder}{property_name}_invalid_depth_M_250m.tif' not found."
             in caplog.text
         )
 
@@ -248,7 +259,7 @@ def test_check_property_shapes(caplog):
     with caplog.at_level("ERROR"):
         with pytest.raises(ValueError):
             check_property_shapes(np.array([[1, 2], [3, 4]]), property_names)
-        assert "do not match the number of required depths (6)!" in caplog.text
+        assert "do not match the number of required depths (6)." in caplog.text
         caplog.clear()
 
         # No error when omitting check of layer numbers

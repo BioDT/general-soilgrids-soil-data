@@ -103,7 +103,7 @@ def extract_raster_value(tif_file, coordinates, *, band_number=1, attempts=5, de
             return value[0], time_stamp
         except rasterio.errors.RasterioError as e:
             attempts -= 1
-            logger.error(f"Reading TIF file failed (Error {e}).")
+            logger.error(f"Reading TIF file failed ({e}).")
 
             if attempts > 0:
                 logger.info(f" Retrying in {delay} seconds ...")
@@ -141,12 +141,10 @@ def check_url(url, *, attempts=3, delay=2):
                 if attempts > 0:
                     time.sleep(delay)
             else:
-                logger.error(
-                    f"Invalid URL: {url} (Status code {response.status_code})."
-                )
+                logger.error(f"Invalid URL {url} (Status code {response.status_code}).")
                 return None
         except requests.exceptions.MissingSchema:
-            logger.error(f"Invalid URL format: {url}")
+            logger.error(f"Invalid URL format ({url}).")
             return None
         except requests.ConnectionError as e:
             attempts -= 1
@@ -154,10 +152,10 @@ def check_url(url, *, attempts=3, delay=2):
             if attempts > 0:
                 time.sleep(delay)
             else:
-                logger.error(f"Connection error: {e}")
+                logger.error(f"Connection failed ({e}).")
                 return None
         except requests.exceptions.RequestException as e:
-            logger.error(f"Request error: {e}")
+            logger.error(f"Request failed ({e}).")
             return None
 
     return None

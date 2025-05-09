@@ -25,18 +25,29 @@ Science Ltd., Finland and the LUMI consortium through a EuroHPC Development Acce
 
 import logging
 from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        TimedRotatingFileHandler(
-            "soilgrids_app.log", when="midnight", interval=1, backupCount=7
-        ),  # rotate daily, keep 7 backups
-        logging.StreamHandler(),
-    ],
+# Define log file path
+log_file = Path("logs") / "soilgrids_app.log"
+log_file.parent.mkdir(parents=True, exist_ok=True)
+
+# Create a logger specific to this package
+logger = logging.getLogger("soilgrids")
+logger.setLevel(logging.INFO)
+
+# Create handlers
+file_handler = TimedRotatingFileHandler(
+    log_file, when="midnight", interval=1, backupCount=7
+)  # rotate daily, keep 7 backups
+file_handler.setFormatter(
+    logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 )
 
-# Create a logger object
-logger = logging.getLogger(__name__)
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(
+    logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+)
+
+# Add handlers to the logger
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)

@@ -215,14 +215,16 @@ def download_soilgrids(request, *, attempts=6, delay_exponential=8, delay_linear
             if response.status_code == 200:
                 return response.json(), time_stamp
             elif response.status_code in status_codes_rate:
-                logger.error(f"Request rate limited (Error {response.status_code}).")
+                logger.error(
+                    f"Request rate limited (Status code  {response.status_code})."
+                )
 
                 if attempts > 0:
                     logger.info(f"Retrying in {delay_exponential} seconds ...")
                     time.sleep(delay_exponential)
                     delay_exponential *= 2
             elif response.status_code in status_codes_gateway:
-                logger.error(f"Request failed (Error {response.status_code}).")
+                logger.error(f"Request failed (Status code  {response.status_code}).")
 
                 if attempts > 0:
                     logger.info(f"Retrying in {delay_linear} seconds ...")
@@ -232,7 +234,7 @@ def download_soilgrids(request, *, attempts=6, delay_exponential=8, delay_linear
                     f"SoilGrids REST API download error: {response.reason} ({response.status_code})."
                 )
         except requests.RequestException as e:
-            logger.error(f"Request failed {e}.")
+            logger.error(f"Request failed ({e}).")
 
             if attempts > 0:
                 logger.info(f"Retrying in {delay_linear} seconds ...")
@@ -317,7 +319,7 @@ def get_hihydrosoil_map_file(property_name, depth, *, cache=None):
         if map_file.is_file():
             return map_file
         else:
-            logger.error(f"Local file '{map_file}' not found!")
+            logger.error(f"Local file '{map_file}' not found.")
             logger.info("Trying to access via URL ...")
 
     map_file = "http://opendap.biodt.eu/grasslands-pdt/soilMapsHiHydroSoil/" + file_name
@@ -325,7 +327,7 @@ def get_hihydrosoil_map_file(property_name, depth, *, cache=None):
     if ut.check_url(map_file):
         return map_file
     else:
-        logger.error(f"File '{map_file}' not found!")
+        logger.error(f"File '{map_file}' not found.")
 
         return None
 
@@ -410,7 +412,7 @@ def check_property_shapes(property_data, property_names, *, depths_required=6):
     if depths_required is not None and layer_count != depths_required:
         try:
             raise ValueError(
-                f"Property data layers ({layer_count}) do not match the number of required depths ({depths_required})!"
+                f"Property data layers ({layer_count}) do not match the number of required depths ({depths_required})."
             )
         except ValueError as e:
             logger.error(e)

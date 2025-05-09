@@ -158,17 +158,17 @@ def test_check_url(caplog):
     assert check_url("http://biodt.eu") == "https://biodt.eu/"  # redirected
 
     assert check_url("invalid_schema") is None
-    assert "Invalid URL format:" in caplog.text
+    assert "Invalid URL format" in caplog.text
     caplog.clear()
 
     assert check_url("http://example.com/invalid|character") is None
-    assert "Invalid URL:" in caplog.text
+    assert "Invalid URL" in caplog.text
     caplog.clear()
 
     assert (
         check_url("http://invalid_url") is None
     )  # takes some time due to retry attempts
-    assert "Connection error:" in caplog.text
+    assert "Connection failed" in caplog.text
 
 
 def test_list_to_file(tmp_path):
