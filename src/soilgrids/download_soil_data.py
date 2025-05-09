@@ -142,9 +142,6 @@ def shape_soildata_for_file(array):
 
     Returns:
         numpy.ndarray: Reshaped or transposed array.
-
-    Raises:
-        ValueError: If the input array is not 1D or 2D.
     """
     if array.ndim == 1:
         return array.reshape(1, -1)
@@ -230,9 +227,13 @@ def download_soilgrids(request, *, attempts=6, delay_exponential=8, delay_linear
                     logger.info(f"Retrying in {delay_linear} seconds ...")
                     time.sleep(delay_linear)
             else:
-                raise Exception(
-                    f"SoilGrids REST API download error: {response.reason} ({response.status_code})."
-                )
+                try:
+                    raise Exception(
+                        f"SoilGrids REST API download error: {response.reason} ({response.status_code})."
+                    )
+                except Exception as e:
+                    logger.error(e)
+                    raise
         except requests.RequestException as e:
             logger.error(f"Request failed ({e}).")
 
@@ -398,9 +399,6 @@ def check_property_shapes(property_data, property_names, *, depths_required=6):
 
     Returns:
         None
-
-    Raises:
-        ValueError: If the shape of property_data does not match the expected dimensions.
     """
     if property_data.ndim == 1:
         property_count = 1
