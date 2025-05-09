@@ -240,7 +240,7 @@ def download_soilgrids(request, *, attempts=6, delay_exponential=8, delay_linear
 
     # After exhausting all attempts
     logger.error("Maximum number of attempts reached. Failed to download data.")
-    return None, time_stamp
+    return None, f"DOWNLOAD FAILED! {time_stamp}"
 
 
 def get_soilgrids_data(soilgrids_data, *, property_names=["silt", "clay", "sand"]):
