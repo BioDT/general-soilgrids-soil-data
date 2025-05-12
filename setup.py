@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 # Project metadata
 name = "soilgrids"
@@ -22,4 +22,6 @@ setup(
     license=license,
     python_requires=">=3.10",
     install_requires=install_requires,
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
 )
