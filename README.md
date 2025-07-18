@@ -2,7 +2,7 @@
 Building block for downloading and processing selected soil data at given location from
    SoilGrids and derived data sources (Soilgrids REST API, HiHydroSoil maps).
 
-<a href="https://doi.org/10.5281/zenodo.15730892"><img src="https://zenodo.org/badge/757967623.svg" alt="DOI"></a>
+<a href="https://doi.org/10.5281/zenodo.15730892"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.15730892.svg" alt="DOI"></a>
 
 ## Installation
 The current development version can be installed as:

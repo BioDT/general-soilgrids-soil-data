@@ -116,7 +116,7 @@ def test_download_soilgrids():
     request = configure_soilgrids_request(coordinates)
     json_data, time_stamp = download_soilgrids(request)
 
-    # remove DOWNLOAD FAILED! from time_stamp
+    # Remove DOWNLOAD FAILED! from time_stamp
     if time_stamp.startswith("DOWNLOAD FAILED! "):
         time_stamp = time_stamp[17:]
         download_successful = False
