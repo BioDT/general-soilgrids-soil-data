@@ -191,7 +191,7 @@ def download_soilgrids(request, *, attempts=6, delay_exponential=8, delay_linear
 
     Parameters:
         request (dict): Dictionary containing the request URL (key: 'url') and parameters (key: 'params').
-        attempts (int): Total number of attempts (including the initial try). Default is 6.
+        attempts (int): Total number of attempts (default is 6).
         delay_exponential (int): Initial delay in seconds for request rate limit errors (default is 8).
         delay_linear (int): Delay in seconds for gateway errors and other failed requests (default is 2).
 
@@ -419,7 +419,7 @@ def check_property_shapes(property_data, property_names, *, depths_required=6):
     if property_count != len(property_names):
         try:
             raise ValueError(
-                f"Property data shape ({property_count} rows) does not match the number of property names ({len(property_names)})!"
+                f"Property data shape ({property_count} rows) does not match the number of property names ({len(property_names)})."
             )
         except ValueError as e:
             logger.error(e)

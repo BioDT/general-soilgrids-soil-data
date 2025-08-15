@@ -1,6 +1,11 @@
-numpy>=1.19.0
+# numpy before other packages to ensure compatibility
+numpy==1.26.3
+
+# core packages
+pandas==2.2.0
+
+# additional packages
 openpyxl>=3.1.2
-pandas>=1.5.0
 pyproj>=3.7.1
 pytest>=8.3.3 
 rasterio>=1.3.8
